@@ -1,0 +1,60 @@
+var value:int=0
+func hello():void {
+    print("world\n")
+}
+func printValue():void{
+    global value;// this will be used for importing global variables, you need to take this in mind
+    print(value,"\n");
+}
+func reapeat(word:string):void{
+    print(word+"\n")
+}
+// macros dont create new variables, are really useful
+macro helloLoop(howMany:int,iteration:int){
+    if(howMany<iteration){
+        hello()
+        helloLoop(howMany,iteration++)
+    }
+
+}
+
+func main(){
+    var try:int=0
+    hello()
+    printValue()
+    while(try<10){
+        hello();
+
+    }
+    repeat("hello world")
+    helloLoop(10,0)
+    //lambda functions and all of that will be added later
+
+    //expected output
+    /*
+    world
+    0
+    world
+    world
+    world
+    world
+    world
+    world
+    world
+    world
+    world
+    world
+    hello world
+    world
+    world
+    world
+    world
+    world
+    world
+    world
+    world
+    world
+    world
+   
+    */
+}

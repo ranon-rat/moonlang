@@ -1,0 +1,50 @@
+module Structure
+  ( Program
+  ) where
+import Tokens
+data Types
+  = MStr
+  | MInt
+  | MFloat
+  | MBool
+  | MList [Types]
+
+data Program
+  =   
+     Var String Types String-- nombre tipo variable
+  | Func [Types] [String] [Program] -- tipos de variables, nombres de variables, codigo
+  | While [Program] [Program]--operacion booleana , codigo
+  | If[Program] [Program]--Operacion booleana, codigo
+  | For Program [Program] Program  [Program] -- variable, operacion booleana, update, codigo
+
+  | Ejec String [String]-- nombre de funcion y Nombres de variables
+data Arithmetic=Value Float| Add  |Subtract|Multiply |Divide |Parenthesis [Arithmetic]
+
+structurizeArithmetic:: [Tokens]->Int->[Arithmetic]->[Arithmetic]
+structurizeArithmetic t i=
+  case t!!i of
+  VarName->
+returnValue::Arithmetic->Float
+returnValue (Value x)=x
+returnValue _ =0
+evalArithmetic::[Arithmetic]->Int->Float->Float
+evalArithmetic o i v=
+  if i<length o then
+    if i==0 then
+       evalArithmetic o (i+1) (returnValue (head o)) 
+    else do
+    let nv= case o!!(i+1) of
+             
+              Parenthesis x->evalArithmetic x 0 0
+              Value x-> x
+              _->0
+    case o!!i of 
+      Add->evalArithmetic o (i+2) (v+nv)
+      Subtract->evalArithmetic o (i+2) (v-nv)
+      Multiply->evalArithmetic o (i+2) (v*nv)
+      Divide->evalArithmetic o (i+2) (v/nv)
+      _->v  
+  else
+    v
+
+  
