@@ -1,7 +1,9 @@
 module Structure
   ( Program
   ) where
+
 import Tokens
+
 data Types
   = MStr
   | MInt
@@ -20,6 +22,7 @@ data Program
   | Ejec String [String]-- nombre de funcion y Nombres de variables
 data Arithmetic=Value Float| Add  |Subtract|Multiply |Divide |Parenthesis [Arithmetic]
 
+{-
 structurizeArithmetic:: [Tokens]->Int->[Arithmetic]->[Arithmetic]
 structurizeArithmetic t i=
   case t!!i of
@@ -27,11 +30,14 @@ structurizeArithmetic t i=
 returnValue::Arithmetic->Float
 returnValue (Value x)=x
 returnValue _ =0
+-}
+
 evalArithmetic::[Arithmetic]->Int->Float->Float
 evalArithmetic o i v=
   if i<length o then
     if i==0 then
-       evalArithmetic o (i+1) (returnValue (head o)) 
+       --evalArithmetic o (i+1) (returnValue (head o))
+       1
     else do
     let nv= case o!!(i+1) of
              

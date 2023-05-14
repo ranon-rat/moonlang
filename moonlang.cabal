@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -25,9 +25,14 @@ source-repository head
 
 library
   exposed-modules:
+      Lexical.Definitions
+      Lexical.Mod
+      Lexical.Solvers.DoubleQuotes
+      Lexical.Solvers.DoubleSlash
+      Lexical.Solvers.Identifier
+      Lexical.Solvers.SlashAndAsterisk
+      Lexical.Solvers.Unknown
       Lib
-      Structure
-      Tokens
   other-modules:
       Paths_moonlang
   hs-source-dirs:

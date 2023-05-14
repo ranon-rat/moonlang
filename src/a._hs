@@ -1,0 +1,231 @@
+
+slice :: Int -> Int -> [a] -> [a]
+slice from to xs = take (to - from + 1) (drop from xs)
+
+--
+
+unknownAnalyzer :: AnalyzerContext -> AnalyzerContext
+unknownAnalyzer ctx = do
+    let indexOfSpace = elemIndex ' ' (drop (fileCursor ctx) (fileContent ctx))
+
+    let indexOf = case indexOfSpace of
+            Nothing -> length (fileContent ctx) - 1
+            Just x -> x
+
+    let token = TokenInfo {
+        typeOf = Unknown,
+        value = Just (slice (fileCursor ctx) (fileCursor ctx + indexOf) (fileContent ctx)),
+        absoluteFilePath = absolutePath ctx,
+        absoluteCursor = fileCursor ctx
+    }
+
+    AnalyzerContext
+        {
+            absolutePath = absolutePath ctx,
+            fileContent = fileContent ctx,
+            fileCursor = fileCursor ctx + indexOf,
+            values = values ctx ++ [token]
+        }
+
+--
+
+identifierAnalyzer' :: String -> Int -> Bool
+identifierAnalyzer' str i
+    | i >= length str = True
+    | (str !! i) `elem` ['a'..'z'] = identifierAnalyzer' str (i + 1)
+    | otherwise = False
+
+identifierAnalyzer :: AnalyzerContext -> AnalyzerContext
+identifierAnalyzer ctx = do
+    let indexOfSpace = elemIndex ' ' (drop (fileCursor ctx) (fileContent ctx))
+
+    let indexOf = case indexOfSpace of
+            Nothing -> length (fileContent ctx) - 1
+            Just x -> x
+
+    let value = slice (fileCursor ctx) (fileCursor ctx + indexOf) (fileContent ctx)
+    let ok = identifierAnalyzer' value 0
+
+    let token = TokenInfo {
+        typeOf = if ok then Identifier else Unknown,
+        value = Just value,
+        absoluteFilePath = absolutePath ctx,
+        absoluteCursor = fileCursor ctx
+    }
+
+    AnalyzerContext
+        {
+            absolutePath = absolutePath ctx,
+            fileContent = fileContent ctx,
+            fileCursor = fileCursor ctx + indexOf,
+            values = values ctx ++ [token]
+        }
+
+--
+
+doubleSlashAnalyzer :: AnalyzerContext -> AnalyzerContext
+doubleSlashAnalyzer ctx = do
+    let indexOfSpace = elemIndex '\n' (drop (fileCursor ctx) (fileContent ctx))
+
+    let indexOf = case indexOfSpace of
+            Nothing -> length (fileContent ctx) - 1
+            Just x -> x
+
+    AnalyzerContext
+        {
+            absolutePath = absolutePath ctx,
+            fileContent = fileContent ctx,
+            fileCursor = fileCursor ctx + indexOf,
+            values = values ctx
+        }
+
+--
+
+slashAndAsteriskAnalyzer' :: AnalyzerContext -> Char -> Maybe Int
+slashAndAsteriskAnalyzer' ctx char
+    | fileCursor ctx >= length (fileContent ctx) = Nothing
+    | char == '*' && (fileContent ctx !! (fileCursor ctx + 1)) == '/' = Just (fileCursor ctx + 1)
+    | otherwise = do
+        let char = fileContent ctx !! (fileCursor ctx + 1)
+
+        let analyzer = AnalyzerContext {
+            absolutePath = absolutePath ctx,
+            fileContent = fileContent ctx,
+            fileCursor = fileCursor ctx + 1,
+            values = values ctx
+        }
+        
+        slashAndAsteriskAnalyzer' analyzer char
+
+slashAndAsteriskAnalyzer :: AnalyzerContext -> AnalyzerContext
+slashAndAsteriskAnalyzer ctx = do
+    let indexOf = slashAndAsteriskAnalyzer' ctx (fileContent ctx !! fileCursor ctx)
+
+    let token = case indexOf of
+            Nothing -> TokenInfo {
+                typeOf = Unknown,
+                value = Nothing,
+                absoluteFilePath = absolutePath ctx,
+                absoluteCursor = fileCursor ctx
+            }
+            Just x -> TokenInfo {
+                typeOf = Unknown,
+                value = Just (slice (fileCursor ctx) x (fileContent ctx)),
+                absoluteFilePath = absolutePath ctx,
+                absoluteCursor = fileCursor ctx
+            }
+
+    AnalyzerContext
+        {
+            absolutePath = absolutePath ctx,
+            fileContent = fileContent ctx,
+            fileCursor = case indexOf of
+                Nothing -> length (fileContent ctx) - 1
+                Just x -> x,
+            values = values ctx ++ [token]
+        }
+
+--
+
+slashAnalyzer :: AnalyzerContext -> AnalyzerContext
+slashAnalyzer ctx = do
+    let char = fileContent ctx !! (fileCursor ctx + 1)
+
+    let ctx = AnalyzerContext {
+        absolutePath = absolutePath ctx,
+        fileContent = fileContent ctx,
+        fileCursor = fileCursor ctx + 1,
+        values = values ctx
+    }
+
+    case char of
+        '/' -> doubleSlashAnalyzer ctx
+        '*' -> slashAndAsteriskAnalyzer ctx
+        ' ' -> AnalyzerContext
+            {
+                absolutePath = absolutePath ctx,
+                fileContent = fileContent ctx,
+                fileCursor = fileCursor ctx + 1,
+                values = values ctx ++ [TokenInfo {
+                    typeOf = Divide,
+                    value = Just "/",
+                    absoluteFilePath = absolutePath ctx,
+                    absoluteCursor = fileCursor ctx
+                }]
+            }
+        _ -> AnalyzerContext
+            {
+                absolutePath = absolutePath ctx,
+                fileContent = fileContent ctx,
+                fileCursor = fileCursor ctx + 1,
+                values = values ctx ++ [TokenInfo {
+                    typeOf = Divide,
+                    value = Just "/",
+                    absoluteFilePath = absolutePath ctx,
+                    absoluteCursor = fileCursor ctx
+                }]
+            }
+
+--
+
+doubleQuotesAnalyzer :: AnalyzerContext -> AnalyzerContext
+doubleQuotesAnalyzer ctx = do
+    let indexOfSpace = elemIndex '"' (drop (fileCursor ctx + 1) (fileContent ctx))
+
+    let indexOf = case indexOfSpace of
+            Nothing -> length (fileContent ctx)
+            Just x -> x
+
+    let token = TokenInfo {
+        typeOf = DoubleQuotes,
+        value = Just (slice (fileCursor ctx + 1) (fileCursor ctx + indexOf) (fileContent ctx)),
+        absoluteFilePath = absolutePath ctx,
+        absoluteCursor = fileCursor ctx
+    }
+
+    AnalyzerContext
+        {
+            absolutePath = absolutePath ctx,
+            fileContent = fileContent ctx,
+            fileCursor = fileCursor ctx + indexOf,
+            values = values ctx ++ [token]
+        }
+
+--
+
+lexicalAnalyzer'' :: AnalyzerContext -> Char -> Maybe AnalyzerContext
+lexicalAnalyzer'' ctx char
+    | char `elem` ['a'..'z'] = Just (identifierAnalyzer ctx)
+    | char == '"' = Just (doubleQuotesAnalyzer ctx)
+    | char == '/' = Just (slashAnalyzer ctx)
+    | otherwise = Nothing
+
+lexicalAnalyzer' :: AnalyzerContext -> [TokenInfo]
+lexicalAnalyzer' ctx
+    | fileCursor ctx >= length (fileContent ctx) = values ctx
+    | otherwise = do
+        let char = fileContent ctx !! fileCursor ctx
+
+        case lexicalAnalyzer'' ctx char of
+            Nothing -> case toToken [char] of
+                    Unknown -> lexicalAnalyzer' (unknownAnalyzer ctx)
+                    _ -> lexicalAnalyzer' AnalyzerContext {
+                        absolutePath = absolutePath ctx,
+                        fileContent = fileContent ctx,
+                        fileCursor = fileCursor ctx + 1,
+                        values = values ctx ++ [TokenInfo {
+                            typeOf = toToken [char],
+                            value = Nothing,
+                            absoluteFilePath = absolutePath ctx,
+                            absoluteCursor = fileCursor ctx
+                        }]
+                    }
+            Just analyzer -> lexicalAnalyzer' analyzer
+
+lexicalAnalyzer :: String -> [TokenInfo]
+lexicalAnalyzer str = lexicalAnalyzer' AnalyzerContext {
+    absolutePath = "",
+    fileContent = str,
+    fileCursor = 0,
+    values = []
+}

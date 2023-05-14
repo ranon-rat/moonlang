@@ -1,10 +1,10 @@
 module Tokens
-  ( tokenize
-  , Tokens
-  ) where
+  ( tokenize,
+    Tokens,
+  )
+where
 
-
---some basic tokens thar are needed for some basic testing
+-- some basic tokens thar are needed for some basic testing
 data Tokens
   = StartBrace
   | EndBrace
@@ -29,42 +29,42 @@ data Tokens
 
 tokens :: [(Char, Tokens)]
 tokens =
-  [ ('{', StartBrace)
-  , ('}', EndBrace)
-  , ('(', StartParenthesis)
-  , (',', Comma)
-  , (')', EndParenthesis)
-  , (';', Semmicolon)
-  , ('"', Quotes)
-  , ('=', Equals)
-  , ('+', Add)
-  , ('-', Subtract)
-  , ('*', Multiply)
-  , ('/', Divide)
-  , ('%', Mod)
-  , ('>', BiggerThan)
-  , ('<', LowerThan)
-  , ('\\', Backlash)
-  , ('\n', EndOfLine)
-  , (':', DoubleDots)
+  [ ('{', StartBrace),
+    ('}', EndBrace),
+    ('(', StartParenthesis),
+    (',', Comma),
+    (')', EndParenthesis),
+    (';', Semmicolon),
+    ('"', Quotes),
+    ('=', Equals),
+    ('+', Add),
+    ('-', Subtract),
+    ('*', Multiply),
+    ('/', Divide),
+    ('%', Mod),
+    ('>', BiggerThan),
+    ('<', LowerThan),
+    ('\\', Backlash),
+    ('\n', EndOfLine),
+    (':', DoubleDots)
   ]
 
 lineComment :: String -> Int -> Int
 lineComment ts i =
   if i < length ts
     then case ts !! i of
-           '\n' -> i  
-           _    -> lineComment ts (i + 1)
+      '\n' -> i
+      _ -> lineComment ts (i + 1)
     else i
 
 multiComment :: String -> Int -> Int
 multiComment ts i =
   if (i + 1) < length ts
-    then if ts !! i == '*' && ts !! (i + 1) == '/'
-           then i + 2
-           else multiComment ts (i + 1)
+    then
+      if ts !! i == '*' && ts !! (i + 1) == '/'
+        then i + 2
+        else multiComment ts (i + 1)
     else i
-
 
 -- program value index token
 tokenize :: String -> String -> Int -> [Tokens] -> [Tokens]
@@ -80,14 +80,14 @@ tokenize program s i t =
               case program !! (i + 1) of
                 '/' -> tokenize program s (lineComment program i) t
                 '*' -> tokenize program s (multiComment program i) t
-                _   -> tokenize program s (i + 1) (t ++ [token])
+                _ -> tokenize program s (i + 1) (t ++ [token])
             EndOfLine ->
-              tokenize program "" (i + 1) (t ++ [VarName s] ++ [EndOfLine]) --this two are importan for evaluation
+              tokenize program "" (i + 1) (t ++ [VarName s] ++ [EndOfLine]) -- this two are importan for evaluation
             Semmicolon ->
-              tokenize program "" (i + 1) (t ++ [VarName s] ++ [Semmicolon]) --this two are importan for evaluation
+              tokenize program "" (i + 1) (t ++ [VarName s] ++ [Semmicolon]) -- this two are importan for evaluation
             _ -> tokenize program s (i + 1) (t ++ [token])
         Nothing ->
           case str of
             ' ' -> tokenize program "" (i + 1) (t ++ [VarName s])
-            _   -> tokenize program (s ++ [str]) (i + 1) t
+            _ -> tokenize program (s ++ [str]) (i + 1) t
     else t
